@@ -2,20 +2,24 @@ import os
 import uuid
 import math
 import json
-from datetime import datetime, date
+import smtplib
+import jwt
+from datetime import datetime, date, timedelta, timezone
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from typing import List, Optional
 from pydantic import BaseModel, EmailStr, ConfigDict, field_serializer, Field
 from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import create_engine, Column, Integer, String, Numeric, ForeignKey, Text, DateTime, func
+from sqlalchemy import create_engine, Column, Integer, String, Numeric, ForeignKey, Text, DateTime, Boolean, func
 from sqlalchemy.orm import sessionmaker, Session, relationship, declarative_base, joinedload
 from openai import OpenAI
 from dotenv import load_dotenv
 
 # ==========================================
-# 0. LOAD ENVIRONMENT VARIABLES
+# 0. LOAD ENVIRONMENT VARIABLES & CONFIG
 # ==========================================
 load_dotenv()
 
@@ -24,6 +28,49 @@ DATABASE_URL = os.getenv(
     "mysql+pymysql://root:root1234@localhost:3306/alswell_retail_inventory"
 )
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
+
+# Email Protocol Configuration
+JWT_SECRET = os.getenv("JWT_SECRET", "ALSWELL_SECURE_VERIFICATION_KEY_2026")
+APP_URL = os.getenv("APP_URL", "http://localhost:8000")
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", 465))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASS = os.getenv("SMTP_PASS", "")
+
+# Helper Function to Dispatch Verification Email Protocol
+def send_verification_email(recipient_email: str, token: str):
+    activation_link = f"{APP_URL}/api/verify-email?token={token}"
+    
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Action Required: Confirm Your ALSWELL Account"
+    msg["From"] = f"ALSWELL Storefront <{SMTP_USER}>"
+    msg["To"] = recipient_email
+
+    html_content = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+      <h2 style="color: #2563eb; margin-bottom: 8px;">Welcome to ALSWELL</h2>
+      <p style="color: #475569; font-size: 14px;">Please confirm your email address to activate your account.</p>
+      <div style="margin: 30px 0;">
+        <a href="{activation_link}" style="background-color: #059669; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">
+          Verify Email Address
+        </a>
+      </div>
+      <p style="color: #94a3b8; font-size: 12px;">This activation link is valid for 15 minutes. If you did not request this, please ignore this email.</p>
+    </div>
+    """
+    msg.attach(MIMEText(html_content, "html"))
+
+    if not SMTP_USER or not SMTP_PASS:
+        print(f"\n[STUB SMTP WARNING] SMTP credentials not set. Activation Link for {recipient_email}:\n{activation_link}\n")
+        return
+
+    try:
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as server:
+            server.login(SMTP_USER, SMTP_PASS)
+            server.sendmail(SMTP_USER, recipient_email, msg.as_string())
+    except Exception as e:
+        print(f"[SMTP ERROR] Failed to send email: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to dispatch verification email.")
 
 # ==========================================
 # 1. DATABASE & SYSTEM INITIALIZATION
@@ -78,6 +125,7 @@ class UserModel(Base):
     email = Column(String(150), unique=True, nullable=False, index=True)
     password = Column(String(255), nullable=False)
     role = Column(String(50), default="Customer", nullable=False)
+    is_verified = Column(Boolean, default=False, nullable=False)
 
 class ProductModel(Base):
     __tablename__ = "products"
@@ -242,28 +290,72 @@ class OptimizationResponse(BaseModel):
 # ==========================================
 @app.post("/api/register", response_model=UserResponse)
 def register_system_user(payload: UserRegisterPayload, db: Session = Depends(get_db)):
-    existing_user = db.query(UserModel).filter(UserModel.email == payload.email).first()
+    clean_email = payload.email.strip().lower()
+
+    existing_user = db.query(UserModel).filter(UserModel.email == clean_email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="This email address is already registered.")
     
     new_user = UserModel(
-        email=payload.email,
+        email=clean_email,
         password=payload.password,
-        role=payload.role if payload.role in ["Customer", "Staff", "Admin"] else "Customer"
+        role=payload.role if payload.role in ["Customer", "Staff", "Admin"] else "Customer",
+        is_verified=False
     )
     
     db.add(new_user)
     db.commit()
-    db.refresh(new_user)
-    return {"email": new_user.email, "role": new_user.role, "status": "Account Created Successfully"}
+
+    # Generate a cryptographically signed verification token (15-minute expiration)
+    token_payload = {
+        "email": clean_email,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=15)
+    }
+    verification_token = jwt.encode(token_payload, JWT_SECRET, algorithm="HS256")
+
+    # Send verification email
+    send_verification_email(clean_email, verification_token)
+
+    return {
+        "email": new_user.email, 
+        "role": new_user.role, 
+        "status": "Verification Link Dispatched to Email"
+    }
+
+@app.get("/api/verify-email")
+def verify_email_token(token: str, db: Session = Depends(get_db)):
+    if not token:
+        raise HTTPException(status_code=400, detail="Verification token is missing.")
+
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        user_email = payload.get("email")
+
+        user = db.query(UserModel).filter(UserModel.email == user_email).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User account not located.")
+
+        user.is_verified = True
+        db.commit()
+
+        return RedirectResponse(url="/storefront.html?verified=true")
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=400, detail="Verification link has expired. Please register again.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="Invalid verification token.")
 
 @app.post("/api/login", response_model=LoginResponse)
 def login_system_user(payload: LoginPayload, db: Session = Depends(get_db)):
-    user = db.query(UserModel).filter(UserModel.email == payload.email).first()
+    clean_email = payload.email.strip().lower()
+    user = db.query(UserModel).filter(UserModel.email == clean_email).first()
+    
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email address.")
     if user.password != payload.password:
         raise HTTPException(status_code=401, detail="Incorrect password.")
+    if not user.is_verified:
+        raise HTTPException(status_code=403, detail="Account unverified. Please verify your email via the link sent to your inbox.")
+
     return {
         "access_token": user.email,
         "token_type": "bearer",
