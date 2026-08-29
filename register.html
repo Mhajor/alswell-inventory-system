@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALSWELL Marketplace - Create Account</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 h-screen flex items-center justify-center font-sans">
+
+    <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-extrabold text-blue-600 tracking-tight">ALSWELL Store</h1>
+            <p class="text-sm text-gray-500 mt-2">Create an account to start shopping</p>
+        </div>
+
+        <form onsubmit="executeUserRegistration(event)" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Email Address</label>
+                <input type="email" id="reg-email" required 
+                    class="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition" 
+                    placeholder="you@example.com">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Password</label>
+                <input type="password" id="reg-password" required 
+                    class="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition" 
+                    placeholder="••••••••">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Confirm Password</label>
+                <input type="password" id="reg-confirm-password" required 
+                    class="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition" 
+                    placeholder="••••••••">
+            </div>
+            
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-md transition transform active:scale-95">
+                Create Account
+            </button>
+        </form>
+        
+        <div class="mt-6 text-center text-sm text-gray-600">
+            Already have an account? 
+            <a href="login.html" class="text-blue-600 hover:underline font-semibold">Sign In here</a>
+        </div>
+
+        <div class="mt-4 text-center">
+            <a href="storefront.html" class="text-xs text-gray-400 hover:underline">← Continue as Guest</a>
+        </div>
+    </div>
+
+    <script>
+        async function executeUserRegistration(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById("reg-email").value.trim();
+            const password = document.getElementById("reg-password").value;
+            const confirmPassword = document.getElementById("reg-confirm-password").value;
+
+            // Frontend password mismatch guard validation
+            if (password !== confirmPassword) {
+                alert("Validation Error: Passwords do not match!");
+                return;
+            }
+
+            try {
+                const response = await fetch("http://127.0.0.1:8000/api/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (response.ok) {
+                    alert("🎉 Account created successfully! Please sign in to verify your identity.");
+                    window.location.href = "login.html";
+                } else {
+                    const error = await response.json();
+                    alert(`Registration Failed: ${error.detail}`);
+                }
+            } catch (err) {
+                alert("Network communication failure. Ensure your Python API server is running.");
+            }
+        }
+    </script>
+</body>
+</html>

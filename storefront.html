@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALSWELL Online Retail Market - Home</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 font-sans antialiased">
+
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <a href="storefront.html" class="text-2xl font-black tracking-wider text-blue-600">ALSWELL Storefront</a>
+            </div>
+            <div class="w-full sm:w-96 relative">
+                <input type="text" id="storefront-search" oninput="executeCatalogSearch()" class="w-full border border-gray-300 rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="Search products by title or item SKU...">
+                <div class="absolute left-3.5 top-3 text-gray-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+            </div>
+            <div id="auth-status-zone" class="flex items-center space-x-4"></div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-2">
+            <h2 class="text-xl font-bold text-gray-800 mb-6">Our Marketplace Selection</h2>
+            <div id="catalog-products-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <p class="text-gray-400 p-4">Loading market assets...</p>
+            </div>
+        </div>
+
+        <div class="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-200 h-fit sticky top-24">
+            <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center justify-between">
+                <span>🛒 Your Shopping Basket</span>
+                <span id="cart-item-count" class="bg-blue-100 text-blue-800 text-xs px-2.5 py-1 rounded-full font-bold">0 Items</span>
+            </h2>
+            
+            <div id="cart-items-list" class="divide-y divide-gray-100 max-h-48 overflow-y-auto mb-4">
+                <p class="text-sm text-gray-400 text-center py-6">Your shopping basket is completely empty.</p>
+            </div>
+
+            <div id="fulfillment-details-form" class="border-t border-gray-100 pt-4 mb-4 space-y-3 hidden">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Contact Phone Number</label>
+                    <input type="tel" id="cust-phone" class="w-full border border-gray-300 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., +233 24 XXX XXXX">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fulfillment Route</label>
+                    <select id="cust-delivery-type" class="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="Delivery">Dispatch Home Delivery</option>
+                        <option value="Pickup">Instant Showroom Pickup</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-100 pt-4 space-y-3">
+                <div class="flex justify-between text-base font-bold text-gray-900">
+                    <span>Total Bill Cost:</span>
+                    <span id="cart-total-price">GHS 0.00</span>
+                </div>
+                <button id="checkout-action-button" onclick="executeCheckoutTransaction()" disabled class="w-full bg-gray-300 text-gray-500 font-bold py-3 rounded-xl cursor-not-allowed transition shadow-sm">
+                    Complete Checkout Purchase
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <div id="invoice-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-slate-50 p-4 border-b border-gray-100 flex justify-between items-center print:hidden">
+                <h3 class="font-bold text-gray-700">📄 Customer Order Invoice</h3>
+                <div class="flex items-center space-x-2">
+                    <button onclick="window.print()" class="bg-blue-50 text-blue-600 hover:bg-blue-100 font-semibold text-xs py-2 px-3 rounded-lg transition">🖨️ Print / Save PDF</button>
+                    <button onclick="closeInvoiceModal()" class="text-gray-400 hover:text-gray-600 text-sm font-bold px-2">✕</button>
+                </div>
+            </div>
+            <div class="p-8 overflow-y-auto space-y-6">
+                <div class="flex justify-between items-start border-b border-gray-100 pb-6">
+                    <div>
+                        <h1 class="text-2xl font-black tracking-wider text-blue-600">ALSWELL LTD</h1>
+                        <p class="text-xs text-gray-500 mt-1">Accra, Greater Accra Region, Ghana</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="bg-blue-50 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-md uppercase">Invoice</span>
+                        <p class="text-xs text-gray-500 mt-2">Ref: <span id="invoice-ref" class="font-mono font-bold text-gray-800">---</span></p>
+                        <p class="text-xs text-gray-400">Date: <span id="invoice-date">--/--/----</span></p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-6 text-sm bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Billed Client:</p>
+                        <p id="invoice-client-email" class="font-semibold text-gray-800">---</p>
+                        <p id="invoice-client-phone" class="text-gray-500 font-mono text-xs mt-0.5">---</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Fulfillment Route:</p>
+                        <p id="invoice-delivery-type" class="font-semibold text-blue-600">---</p>
+                        <p class="text-xs text-gray-400 mt-0.5">Status: <span id="invoice-fulfillment-status" class="font-semibold text-amber-600">Pending Review</span></p>
+                    </div>
+                </div>
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-200 text-xs font-bold text-gray-400 uppercase">
+                            <th class="py-2">Line Item Specification</th>
+                            <th class="py-2 text-center w-20">Qty</th>
+                            <th class="py-2 text-right w-32">Unit Cost</th>
+                            <th class="py-2 text-right w-32">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoice-items-body" class="divide-y divide-gray-100 text-gray-700"></tbody>
+                </table>
+                <div class="border-t border-gray-200 pt-4 flex justify-end">
+                    <div class="w-64 space-y-2 text-sm">
+                        <div class="flex justify-between text-base font-black text-gray-900 border-t border-gray-100 pt-2">
+                            <span>Total Payable:</span>
+                            <span id="invoice-total">GHS 0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = "http://127.0.0.1:8000/api";
+        let masterCatalogInventory = []; 
+        let localBasket = [];
+
+        function syncUserAuthHeader() {
+            const role = localStorage.getItem("userRole");
+            const email = localStorage.getItem("userEmail");
+            const zone = document.getElementById("auth-status-zone");
+
+            if (role === "Customer" && email) {
+                zone.innerHTML = `
+                    <a href="customer-profile.html" class="text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-200 py-1.5 px-4 rounded-xl hover:bg-blue-100 transition shadow-sm flex items-center gap-1">
+                        👤 Account Profile (${email})
+                    </a>
+                    <a href="#" onclick="clearSessionLogout()" class="text-sm font-medium text-red-600 hover:underline">Log Out</a>
+                `;
+            } else if (role === "Admin" || role === "Staff") {
+                zone.innerHTML = `
+                    <a href="dashboard.html" class="text-sm bg-slate-800 text-white font-medium py-1.5 px-3 rounded-lg hover:bg-slate-700 transition">⚙️ Backend Panel</a>
+                    <a href="#" onclick="clearSessionLogout()" class="text-sm font-medium text-red-600 hover:underline">Log Out</a>
+                `;
+            } else {
+                zone.innerHTML = `<a href="login.html" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2 px-5 rounded-xl shadow transition">Sign In</a>`;
+            }
+        }
+
+        async function bootStorefrontHome() {
+            syncUserAuthHeader();
+            try {
+                const response = await fetch(`${API_BASE_URL}/products`);
+                masterCatalogInventory = await response.json();
+                renderCatalog(masterCatalogInventory);
+            } catch (err) {
+                document.getElementById("catalog-products-container").innerHTML = `<p class="text-red-500 p-4">Error connecting to resource server.</p>`;
+            }
+        }
+
+        function renderCatalog(items) {
+            const wrapper = document.getElementById("catalog-products-container");
+            wrapper.innerHTML = "";
+            items.forEach(item => {
+                const fallbackImg = "https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=500&auto=format&fit=crop";
+                
+                const descriptionContent = item.description && item.description.trim() !== "" 
+                    ? item.description 
+                    : "No item details provided.";
+
+                wrapper.innerHTML += `
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col justify-between hover:shadow-lg transition duration-300">
+                        <div class="w-full h-48 bg-gray-100 relative overflow-hidden">
+                            <img src="${item.image_url ? item.image_url : fallbackImg}" class="w-full h-full object-cover object-center">
+                            <span class="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-blue-600 font-mono text-[10px] font-bold py-1 px-2.5 rounded-full shadow-sm">${item.sku}</span>
+                        </div>
+                        <div class="p-5 flex-1 flex flex-col justify-between">
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900 line-clamp-2">${item.name}</h3>
+                                <p class="text-xs text-gray-500 mt-2 line-clamp-3 bg-gray-50 p-2 rounded-lg border border-gray-100">${descriptionContent}</p>
+                                <p class="text-2xl font-black text-slate-800 mt-3">GHS ${parseFloat(item.price).toFixed(2)}</p>
+                            </div>
+                            <button onclick="appendItemToBasket(${item.product_id}, '${item.name.replace(/'/g, "\\'")}', ${item.price})" class="mt-5 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl text-sm transition shadow-sm cursor-pointer">Add to Basket</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function executeCatalogSearch() {
+            const criteria = document.getElementById("storefront-search").value.toLowerCase().trim();
+            if (!criteria) { renderCatalog(masterCatalogInventory); return; }
+            renderCatalog(masterCatalogInventory.filter(item => item.name.toLowerCase().includes(criteria) || item.sku.toLowerCase().includes(criteria)));
+        }
+
+        function appendItemToBasket(id, name, price) {
+            if (localStorage.getItem("userRole") !== "Customer") {
+                alert("Please log in as a customer first.");
+                window.location.href = "login.html";
+                return;
+            }
+
+            const existingItem = localBasket.find(item => item.id === id);
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                localBasket.push({ id, name, price, quantity: 1 });
+            }
+
+            updateBasketUI();
+        }
+
+        function adjustQuantity(index, delta) {
+            if (localBasket[index]) {
+                localBasket[index].quantity += delta;
+                if (localBasket[index].quantity <= 0) {
+                    localBasket.splice(index, 1);
+                }
+                updateBasketUI();
+            }
+        }
+
+        function updateBasketUI() {
+            const listWrapper = document.getElementById("cart-items-list");
+            const totalLabel = document.getElementById("cart-total-price");
+            const payBtn = document.getElementById("checkout-action-button");
+            const formZone = document.getElementById("fulfillment-details-form");
+
+            const totalItemCount = localBasket.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById("cart-item-count").innerText = `${totalItemCount} Items`;
+            
+            if (localBasket.length === 0) {
+                listWrapper.innerHTML = `<p class="text-sm text-gray-400 text-center py-6">Your shopping basket is completely empty.</p>`;
+                totalLabel.innerText = "GHS 0.00";
+                payBtn.disabled = true;
+                formZone.classList.add("hidden");
+                payBtn.className = "w-full bg-gray-300 text-gray-500 font-bold py-3 rounded-xl cursor-not-allowed shadow-sm";
+                return;
+            }
+
+            formZone.classList.remove("hidden");
+            listWrapper.innerHTML = "";
+            let summationBill = 0;
+            
+            localBasket.forEach((entry, targetIndex) => {
+                const itemTotal = parseFloat(entry.price) * entry.quantity;
+                summationBill += itemTotal;
+                listWrapper.innerHTML += `
+                    <div class="py-3 flex justify-between items-center text-sm">
+                        <div class="pr-2">
+                            <p class="font-bold text-gray-800">${entry.name}</p>
+                            <p class="text-xs text-gray-500">GHS ${parseFloat(entry.price).toFixed(2)} × ${entry.quantity} = <span class="font-semibold text-gray-700">GHS ${itemTotal.toFixed(2)}</span></p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                                <button onclick="adjustQuantity(${targetIndex}, -1)" class="px-2 py-0.5 text-xs font-bold text-gray-600 hover:bg-gray-200 transition">-</button>
+                                <span class="px-2 text-xs font-bold text-gray-800">${entry.quantity}</span>
+                                <button onclick="adjustQuantity(${targetIndex}, 1)" class="px-2 py-0.5 text-xs font-bold text-gray-600 hover:bg-gray-200 transition">+</button>
+                            </div>
+                            <button onclick="dropBasketEntry(${targetIndex})" class="text-red-500 hover:text-red-700 text-xs font-semibold pl-1">Remove</button>
+                        </div>
+                    </div>`;
+            });
+
+            totalLabel.innerText = `GHS ${summationBill.toFixed(2)}`;
+            payBtn.disabled = false;
+            payBtn.className = "w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow-md cursor-pointer";
+        }
+
+        function dropBasketEntry(index) { localBasket.splice(index, 1); updateBasketUI(); }
+
+        async function executeCheckoutTransaction() {
+            const phone = document.getElementById("cust-phone").value.trim();
+            if (!phone) { alert("Please provide your contact number for delivery coordination."); return; }
+
+            const transactionPayload = {
+                email: localStorage.getItem("userEmail"),
+                phone: phone,
+                delivery_type: document.getElementById("cust-delivery-type").value,
+                items: localBasket.map(i => ({ product_id: i.id, quantity: i.quantity }))
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/checkout`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(transactionPayload)
+                });
+
+                if(response.ok) {
+                    const data = await response.json();
+                    alert(`🎯 Order Created Successfully!`);
+                    
+                    showInvoiceModal({
+                        transaction_reference: data.transaction_reference,
+                        email: transactionPayload.email,
+                        phone: transactionPayload.phone,
+                        delivery_type: transactionPayload.delivery_type,
+                        status: "Pending",
+                        items: localBasket
+                    });
+
+                    localBasket = [];
+                    updateBasketUI();
+                } else {
+                    const errorData = await response.json();
+                    alert(`Checkout Error: ${errorData.detail}`);
+                }
+            } catch (err) { alert("Network connection lost."); }
+        }
+
+        function showInvoiceModal(order) {
+            document.getElementById("invoice-ref").innerText = order.transaction_reference;
+            document.getElementById("invoice-date").innerText = new Date().toLocaleDateString('en-GB');
+            document.getElementById("invoice-client-email").innerText = order.email;
+            document.getElementById("invoice-client-phone").innerText = order.phone;
+            document.getElementById("invoice-delivery-type").innerText = order.delivery_type;
+            document.getElementById("invoice-fulfillment-status").innerText = order.status;
+
+            const body = document.getElementById("invoice-items-body");
+            body.innerHTML = "";
+            let runningSum = 0;
+
+            order.items.forEach(item => {
+                const itemCost = parseFloat(item.price || 0);
+                const itemTotal = itemCost * parseInt(item.quantity);
+                runningSum += itemTotal;
+
+                body.innerHTML += `
+                    <tr>
+                        <td class="py-3 font-medium">${item.name || 'Product Item ID: ' + item.id}</td>
+                        <td class="py-3 text-center">${item.quantity}</td>
+                        <td class="py-3 text-right">GHS ${itemCost.toFixed(2)}</td>
+                        <td class="py-3 text-right font-semibold">GHS ${itemTotal.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById("invoice-total").innerText = `GHS ${runningSum.toFixed(2)}`;
+            document.getElementById("invoice-modal").classList.remove("hidden");
+        }
+
+        function closeInvoiceModal() { document.getElementById("invoice-modal").classList.add("hidden"); }
+        function clearSessionLogout() { localStorage.clear(); syncUserAuthHeader(); localBasket = []; updateBasketUI(); }
+        window.onload = bootStorefrontHome;
+    </script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALSWELL Gateway - Secure Authentication Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 h-screen flex items-center justify-center font-sans">
+
+    <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-extrabold text-slate-800 tracking-tight">ALSWELL LTD</h1>
+            <p class="text-sm text-gray-500 mt-2">Enterprise Resource Hub Authentication</p>
+        </div>
+
+        <form onsubmit="executeUserLogin(event)" class="space-y-5">
+            <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Corporate / Customer Email</label>
+                <input type="email" id="login-email" required class="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="username@domain.com">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Secure Password</label>
+                <input type="password" id="login-password" required class="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="••••••••">
+            </div>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-md transition transform active:scale-95">
+                Log In to ALSWELL Hub
+            </button>
+            <!-- Inside login.html, right below your login form submit button -->
+<div class="mt-6 text-center text-sm text-gray-600">
+    New customer? 
+    <a href="register.html" class="text-blue-600 hover:underline font-semibold">Create an account here</a>
+</div>
+        </form>
+        
+        <div class="mt-5 text-center">
+            <a href="storefront.html" class="text-xs text-blue-600 hover:underline font-medium">← Cancel and Back to Home</a>
+        </div>
+        
+        
+    </div>
+
+    <script>
+        async function executeUserLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById("login-email").value.trim();
+            const password = document.getElementById("login-password").value;
+
+            try {
+                const response = await fetch("http://127.0.0.1:8000/api/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (response.ok) {
+                    const sessionToken = await response.json();
+                    
+                    localStorage.setItem("userRole", sessionToken.role);
+                    localStorage.setItem("userEmail", sessionToken.email);
+
+                    // Context-aware internal switching engine
+                    if (sessionToken.role === "Admin" || sessionToken.role === "Staff") {
+                        window.location.href = "dashboard.html";
+                    } else if (sessionToken.role === "Customer") {
+                        window.location.href = "storefront.html";
+                    }
+                } else {
+                    const error = await response.json();
+                    alert(`Access Denied: ${error.detail}`);
+                }
+            } catch (err) {
+                alert("Authentication failed. Please check your network connection and try again.");
+            }
+        }
+    </script>
+</body>
+</html>

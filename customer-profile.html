@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALSWELL Storefront - My Account Profile</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 font-sans antialiased">
+
+    <nav class="bg-slate-900 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="storefront.html" class="text-xl font-bold tracking-wider hover:text-blue-400 transition">🛍️ ALSWELL STOREFRONT</a>
+            <div class="flex items-center space-x-4">
+                <span id="display-user-email" class="text-sm bg-slate-800 px-3 py-1.5 rounded-lg font-medium text-slate-300">Loading Account...</span>
+                <a href="storefront.html" class="text-sm text-slate-300 hover:text-white font-medium transition">Back to Shopping</a>
+                <button onclick="logoutCustomer()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1.5 px-3 rounded-lg transition">Exit Profile</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 h-fit">
+            <div class="flex flex-col items-center border-b border-gray-100 pb-6 mb-6">
+                <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-3xl font-black mb-3">
+                    👤
+                </div>
+                <h2 class="text-lg font-bold text-gray-800">Customer Account Profile</h2>
+                <span class="text-xs bg-green-100 text-green-800 font-bold px-2.5 py-0.5 rounded-full mt-1.5">Verified Buyer</span>
+            </div>
+            
+            <div class="space-y-4 text-sm">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Registered Email</label>
+                    <p id="profile-email-text" class="text-gray-800 font-medium font-mono">Loading...</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">System Account Tier</label>
+                    <p class="text-gray-800 font-medium">Standard Online Retail Customer</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+            <h3 class="text-lg font-bold text-gray-800 mb-1">📋 Your Personal Order History</h3>
+            <p class="text-xs text-gray-400 mb-6">Track your completed fulfillments and download official invoice documentation statements.</p>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-xs font-bold text-gray-500 uppercase border-b border-gray-200 tracking-wider">
+                            <th class="p-3">Reference #</th>
+                            <th class="p-3">Purchase Date</th>
+                            <th class="p-3 text-center">Status</th>
+                            <th class="p-3 text-right">Grand Total</th>
+                            <th class="p-3 text-center">Documentation</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customer-orders-body" class="divide-y divide-gray-100 text-sm text-gray-700">
+                        <tr>
+                            <td colspan="5" class="p-8 text-center text-gray-400 font-medium">Querying secure purchase history lines...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <template id="invoice-layout">
+        <html>
+        <head>
+            <title>Invoice Statement</title>
+            <style>
+                body { font-family: sans-serif; color: #333; padding: 40px; margin: 0; }
+                .header { display: flex; justify-content: space-between; border-bottom: 2px solid #ddd; padding-bottom: 20px; margin-bottom: 30px; }
+                .meta-section { display: flex; justify-content: space-between; margin-bottom: 40px; font-size: 14px; line-height: 1.5; }
+                table { width: 100%; border-collapse: collapse; text-align: left; margin-bottom: 40px; }
+                th { background: #f4f4f4; padding: 12px; font-size: 12px; text-transform: uppercase; border-bottom: 2px solid #ddd; }
+                td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+                .total-block { text-align: right; font-size: 18px; font-weight: bold; margin-top: 20px; color: #2563eb; }
+                .footer { margin-top: 60px; text-align: center; font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 20px; }
+                @media print { .no-print { display: none; } }
+            </style>
+        </head>
+        <body>
+            <div class="no-print" style="margin-bottom: 20px; text-align: right;">
+                <button onclick="window.print()" style="padding: 10px 20px; background: #2563eb; color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 5px;">🖨️ Print Document</button>
+            </div>
+            
+            <div class="header">
+                <div>
+                    <h1 style="margin: 0; color: #0f172a; letter-spacing: 1px;">ALSWELL LTD</h1>
+                    <p style="margin: 5px 0 0 0; color: #666; font-size: 12px;">Accra, Greater Accra Region, Ghana</p>
+                </div>
+                <div style="text-align: right;">
+                    <h2 style="margin: 0; color: #2563eb;">OFFICIAL INVOICE</h2>
+                    <p style="margin: 5px 0 0 0; font-family: monospace; font-weight: bold;">Ref: <span id="inv-ref"></span></p>
+                </div>
+            </div>
+
+            <div class="meta-section">
+                <div>
+                    <strong>Billed Account Holder:</strong><br>
+                    Email: <span id="inv-email"></span><br>
+                    Contact Phone: <span id="inv-phone"></span>
+                </div>
+                <div style="text-align: right;">
+                    <strong>Transaction Details:</strong><br>
+                    Date Issued: <span id="inv-date"></span><br>
+                    Status: <span id="inv-status"></span><br>
+                    Fulfillment: <span id="inv-delivery"></span>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Billing Item Details</th>
+                        <th style="text-align: center;">Qty</th>
+                        <th style="text-align: right;">Price</th>
+                        <th style="text-align: right;">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody id="inv-items-body">
+                    </tbody>
+            </table>
+
+            <div class="total-block">Total Amount Charged: GHS <span id="inv-total"></span></div>
+            <div class="footer">Thank you for shopping with ALSWELL LTD.<br><em>System Authenticated Verified Ledger Copy</em></div>
+        </body>
+        </html>
+    </template>
+
+    <script>
+        const API_BASE_URL = "http://127.0.0.1:8000/api";
+        const customerEmail = localStorage.getItem("userEmail");
+        const customerRole = localStorage.getItem("userRole");
+
+        let loadedOrdersCache = {};
+
+        function checkCustomerSession() {
+            if (!customerEmail || customerRole !== "Customer") {
+                alert("Please log in with a customer account to view this profile.");
+                window.location.href = "login.html";
+                return false;
+            }
+            document.getElementById("display-user-email").innerText = customerEmail;
+            document.getElementById("profile-email-text").innerText = customerEmail;
+            return true;
+        }
+
+        async function fetchCustomerPurchases() {
+            if (!checkCustomerSession()) return;
+
+            try {
+                const response = await fetch(API_BASE_URL + "/orders");
+                if (!response.ok) throw new Error("Could not pull network transactions ledger.");
+                
+                const allOrders = await response.json();
+                
+                const uniqueCustomerOrders = allOrders.filter(function(order) {
+                    return order.customer_email && order.customer_email.toLowerCase() === customerEmail.toLowerCase();
+                });
+                
+                renderOrdersTable(uniqueCustomerOrders);
+            } catch (err) {
+                console.error(err);
+                document.getElementById("customer-orders-body").innerHTML = 
+                    '<tr><td colspan="5" class="p-4 text-center text-red-500 font-bold">Failed to load system transaction logs.</td></tr>';
+            }
+        }
+
+        function renderOrdersTable(orders) {
+            const container = document.getElementById("customer-orders-body");
+            container.innerHTML = "";
+
+            if (orders.length === 0) {
+                container.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-gray-400 font-medium">You haven\'t placed any orders with ALSWELL yet!</td></tr>';
+                return;
+            }
+
+            orders.forEach(function(order) {
+                let badgeClass = "bg-amber-100 text-amber-800";
+                if (order.order_status === "Completed") badgeClass = "bg-green-100 text-green-800";
+                if (order.order_status === "Cancelled") badgeClass = "bg-red-100 text-red-800";
+
+                loadedOrdersCache[order.transaction_reference] = order;
+
+                let row = document.createElement("tr");
+                row.className = "hover:bg-gray-50 border-b border-gray-100 text-xs transition";
+                
+                row.innerHTML = `
+                    <td class="p-3 font-mono font-bold text-gray-900">${order.transaction_reference}</td>
+                    <td class="p-3 text-gray-500 font-medium">${order.order_date || 'N/A'}</td>
+                    <td class="p-3 text-center">
+                        <span class="${badgeClass} font-semibold px-2 py-0.5 rounded text-[10px] uppercase tracking-wide border">${order.order_status}</span>
+                    </td>
+                    <td class="p-3 text-right font-bold text-slate-900">GHS ${parseFloat(order.total_amount).toFixed(2)}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="printInvoice('${order.transaction_reference}')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-1 px-2.5 rounded border border-blue-200 transition text-[11px]">
+                            📄 View Invoice
+                        </button>
+                    </td>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function printInvoice(referenceId) {
+            const order = loadedOrdersCache[referenceId];
+            if (!order) return;
+
+            // Grab the clean HTML layout structure from our template tag
+            const template = document.getElementById("invoice-layout").innerHTML;
+            
+            // Open standard detached browser window context
+            const invoiceWindow = window.open("", "_blank", "width=800,height=600");
+            invoiceWindow.document.write(template);
+            
+            // Smoothly insert order properties directly into the new window DOM elements
+            invoiceWindow.document.getElementById("inv-ref").innerText = order.transaction_reference;
+            invoiceWindow.document.getElementById("inv-email").innerText = order.customer_email;
+            invoiceWindow.document.getElementById("inv-phone").innerText = order.customer_phone || "N/A";
+            invoiceWindow.document.getElementById("inv-date").innerText = order.order_date || "N/A";
+            invoiceWindow.document.getElementById("inv-status").innerText = order.order_status;
+            invoiceWindow.document.getElementById("inv-delivery").innerText = order.delivery_type || "Standard";
+            invoiceWindow.document.getElementById("inv-total").innerText = parseFloat(order.total_amount).toFixed(2);
+
+            const itemsBody = invoiceWindow.document.getElementById("inv-items-body");
+            itemsBody.innerHTML = "";
+
+            if (order.items && order.items.length > 0) {
+                order.items.forEach(function(item) {
+                    const lineCost = item.quantity * item.unit_price;
+                    itemsBody.innerHTML += `
+                        <tr>
+                            <td>Product ID: #${item.product_id}</td>
+                            <td style="text-align: center;">${item.quantity}</td>
+                            <td style="text-align: right;">GHS ${parseFloat(item.unit_price).toFixed(2)}</td>
+                            <td style="text-align: right; font-weight: bold;">GHS ${lineCost.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                itemsBody.innerHTML = `
+                    <tr>
+                        <td>Storefront Checkout Purchase Bundle Summary</td>
+                        <td style="text-align: center;">1</td>
+                        <td style="text-align: right;">GHS ${parseFloat(order.total_amount).toFixed(2)}</td>
+                        <td style="text-align: right; font-weight: bold;">GHS ${parseFloat(order.total_amount).toFixed(2)}</td>
+                    </tr>
+                `;
+            }
+
+            invoiceWindow.document.close();
+        }
+
+        function logoutCustomer() {
+            localStorage.clear();
+            window.location.href = "storefront.html";
+        }
+
+        window.onload = fetchCustomerPurchases;
+    </script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALSWELL Management System - Orders Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans antialiased">
+    <div class="flex h-screen overflow-hidden">
+        <div class="w-64 bg-slate-900 text-white flex flex-col flex-shrink-0">
+            <div class="p-5 text-xl font-bold tracking-wider border-b border-slate-800">ALSWELL LTD</div>
+            <nav class="flex-1 p-4 space-y-2">
+                <a href="dashboard.html" class="block py-2.5 px-4 rounded text-slate-300 hover:bg-slate-800 hover:text-white transition">📊 Dashboard</a>
+                <a href="products.html" class="block py-2.5 px-4 rounded text-slate-300 hover:bg-slate-800 hover:text-white transition">📦 Products</a>
+                <a href="#" class="block py-2.5 px-4 rounded bg-blue-600 text-white font-medium">📋 Orders Log</a>
+                <a href="storefront.html" target="_blank" class="block py-2.5 px-4 rounded text-slate-300 hover:bg-slate-800 hover:text-white transition">🛒 Open Storefront</a>
+                <a href="login.html" onclick="localStorage.clear()" class="block py-2.5 px-4 rounded text-red-400 hover:bg-red-950 transition">Exit Session</a>
+            </nav>
+        </div>
+
+        <div class="flex-1 flex flex-col overflow-y-auto">
+            <header class="bg-white shadow-sm py-4 px-6 flex justify-between items-center">
+                <h1 class="text-2xl font-semibold text-gray-800">Order Processing Pipelines</h1>
+            </header>
+            <main class="p-6">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100 text-xs font-semibold text-gray-600 uppercase border-b border-gray-200">
+                                <th class="p-4">Transaction Ref</th>
+                                <th class="p-4">Customer Email</th>
+                                <th class="p-4">Delivery Route</th>
+                                <th class="p-4">Amount Invoice</th>
+                                <th class="p-4">Current State</th>
+                                <th class="p-4 text-center">Fulfillment Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
+                            <tr>
+                                <td colspan="6" class="text-gray-400 p-8 text-center">Fetching incoming pipeline transactions...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div id="invoice-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            
+            <div class="bg-slate-50 p-4 border-b border-gray-100 flex justify-between items-center print:hidden">
+                <h3 class="font-bold text-gray-700">📄 System Generated Invoice</h3>
+                <div class="flex items-center space-x-2">
+                    <button onclick="window.print()" class="bg-blue-50 text-blue-600 hover:bg-blue-100 font-semibold text-xs py-2 px-3 rounded-lg transition">🖨️ Print / Save PDF</button>
+                    <button onclick="closeInvoiceModal()" class="text-gray-400 hover:text-gray-600 text-sm font-bold px-2">✕</button>
+                </div>
+            </div>
+
+            <div class="p-8 overflow-y-auto space-y-6">
+                <div class="flex justify-between items-start border-b border-gray-100 pb-6">
+                    <div>
+                        <h1 class="text-2xl font-black tracking-wider text-blue-600">ALSWELL LTD</h1>
+                        <p class="text-xs text-gray-500 mt-1">Accra, Greater Accra Region, Ghana</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="bg-blue-50 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-md uppercase">Invoice</span>
+                        <p class="text-xs text-gray-500 mt-2">Ref: <span id="invoice-ref" class="font-mono font-bold text-gray-800">---</span></p>
+                        <p class="text-xs text-gray-400">Date: <span id="invoice-date">--/--/----</span></p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6 text-sm bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Billed Client:</p>
+                        <p id="invoice-client-email" class="font-semibold text-gray-800">---</p>
+                        <p id="invoice-client-phone" class="text-gray-400 font-mono text-xs mt-0.5">---</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Fulfillment Route:</p>
+                        <p id="invoice-delivery-type" class="font-semibold text-blue-600">---</p>
+                        <p class="text-xs text-gray-400 mt-0.5">Status: <span id="invoice-fulfillment-status" class="font-semibold">---</span></p>
+                    </div>
+                </div>
+
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-200 text-xs font-bold text-gray-400 uppercase">
+                            <th class="py-2">Line Item Specification</th>
+                            <th class="py-2 text-center w-20">Qty</th>
+                            <th class="py-2 text-right w-32">Unit Cost</th>
+                            <th class="py-2 text-right w-32">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoice-items-body" class="divide-y divide-gray-100 text-gray-700"></tbody>
+                </table>
+
+                <div class="border-t border-gray-200 pt-4 flex justify-end">
+                    <div class="w-64 space-y-2 text-sm">
+                        <div class="flex justify-between text-base font-black text-gray-900 border-t border-gray-100 pt-2">
+                            <span>Total Payable:</span>
+                            <span id="invoice-total">GHS 0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="invoice-admin-action-zone" class="pt-4 border-t border-gray-100 flex justify-end space-x-2 print:hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = "http://127.0.0.1:8000/api";
+        let localOrdersRegistryCache = [];
+
+        async function fetchSystemOrders() {
+            const tbody = document.querySelector("table tbody");
+            try {
+                const res = await fetch(`${API_BASE_URL}/orders`);
+                localOrdersRegistryCache = await res.json();
+                
+                let rowHTML = "";
+                if(localOrdersRegistryCache.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-gray-400 p-8 text-center">No transactions available in pipeline registries.</td></tr>`;
+                    return;
+                }
+
+                localOrdersRegistryCache.forEach(o => {
+                    let actionControl = "";
+                    if (o.order_status === "Pending") {
+                        actionControl = `
+                            <button onclick="transitionState(${o.order_id}, 'Completed')" class="bg-emerald-600 text-white text-xs px-2.5 py-1 rounded font-bold hover:bg-emerald-700 transition">Complete</button>
+                            <button onclick="transitionState(${o.order_id}, 'Cancelled')" class="bg-red-600 text-white text-xs px-2.5 py-1 rounded font-bold hover:bg-red-700 transition">Cancel</button>
+                        `;
+                    } else {
+                        actionControl = `<span class="text-xs text-gray-400 italic font-medium">Signed: ${o.approved_by || 'Engine'}</span>`;
+                    }
+
+                    rowHTML += `
+                        <tr class="hover:bg-gray-50 border-b border-gray-100">
+                            <td class="p-4 font-mono font-bold text-gray-900 flex items-center space-x-2">
+                                <span>${o.transaction_reference}</span>
+                                <button onclick="openStaffInvoiceModal(${o.order_id})" class="text-[11px] text-blue-600 hover:underline font-semibold print:hidden">🔍 View</button>
+                            </td>
+                            <td class="p-4 font-medium">${o.customer_email}</td>
+                            <td class="p-4 text-gray-500">${o.delivery_type}</td>
+                            <td class="p-4 font-bold">GHS ${o.total_amount.toFixed(2)}</td>
+                            <td class="p-4">
+                                <span class="px-2 py-0.5 rounded text-xs font-bold ${o.order_status==='Completed'?'bg-green-100 text-green-800':o.order_status==='Cancelled'?'bg-gray-100 text-gray-800':'bg-amber-100 text-amber-800'}">
+                                    ${o.order_status}
+                                </span>
+                            </td>
+                            <td class="p-4 text-center space-x-1">${actionControl}</td>
+                        </tr>`;
+                });
+                tbody.innerHTML = rowHTML;
+            } catch(e) { 
+                console.error(e); 
+                tbody.innerHTML = `<tr><td colspan="6" class="text-red-500 p-8 text-center font-medium">Error linking to order management records server.</td></tr>`;
+            }
+        }
+
+        function openStaffInvoiceModal(orderId) {
+            const order = localOrdersRegistryCache.find(o => o.order_id === orderId);
+            if (!order) return;
+
+            document.getElementById("invoice-ref").innerText = order.transaction_reference;
+            document.getElementById("invoice-date").innerText = order.created_at ? new Date(order.created_at).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
+            document.getElementById("invoice-client-email").innerText = order.customer_email;
+            document.getElementById("invoice-client-phone").innerText = order.phone || 'N/A';
+            document.getElementById("invoice-delivery-type").innerText = order.delivery_type;
+            
+            const statusEl = document.getElementById("invoice-fulfillment-status");
+            statusEl.innerText = order.order_status;
+            statusEl.className = order.order_status === "Pending" ? "font-semibold text-amber-600" : order.order_status === "Completed" ? "font-semibold text-green-600" : "font-semibold text-gray-600";
+
+            // Render Itemized Rows
+            const body = document.getElementById("invoice-items-body");
+            body.innerHTML = "";
+
+            if (order.items && order.items.length > 0) {
+                order.items.forEach(item => {
+                    const price = parseFloat(item.price || 0);
+                    const qty = parseInt(item.quantity || 1);
+                    body.innerHTML += `
+                        <tr>
+                            <td class="py-3 font-medium text-gray-800">${item.name || 'Product Item Spec ID: ' + item.product_id}</td>
+                            <td class="py-3 text-center">${qty}</td>
+                            <td class="py-3 text-right">GHS ${price.toFixed(2)}</td>
+                            <td class="py-3 text-right font-semibold">GHS ${(price * qty).toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                // Fallback catch row if items array requires backend join queries
+                body.innerHTML = `
+                    <tr>
+                        <td class="py-3 font-medium text-gray-800">Consolidated System Marketplace Order Package</td>
+                        <td class="py-3 text-center">1</td>
+                        <td class="py-3 text-right">GHS ${order.total_amount.toFixed(2)}</td>
+                        <td class="py-3 text-right font-semibold">GHS ${order.total_amount.toFixed(2)}</td>
+                    </tr>
+                `;
+            }
+
+            document.getElementById("invoice-total").innerText = `GHS ${order.total_amount.toFixed(2)}`;
+
+            // Mirror Contextual Action Buttons in Invoice Panel View
+            const actionZone = document.getElementById("invoice-admin-action-zone");
+            if (order.order_status === "Pending") {
+                actionZone.innerHTML = `
+                    <button onclick="transitionState(${order.order_id}, 'Completed'); closeInvoiceModal();" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-3 rounded shadow transition">Approve & Complete</button>
+                    <button onclick="transitionState(${order.order_id}, 'Cancelled'); closeInvoiceModal();" class="bg-red-600 hover:bg-red-700 text-white font-bold text-xs py-2 px-3 rounded shadow transition">Cancel Transaction</button>
+                `;
+            } else {
+                actionZone.innerHTML = `<span class="text-xs font-bold text-gray-500 bg-gray-100 py-1.5 px-3 rounded border border-gray-200">Processing Lock: ${order.order_status}</span>`;
+            }
+
+            document.getElementById("invoice-modal").classList.remove("hidden");
+        }
+
+        function closeInvoiceModal() { document.getElementById("invoice-modal").classList.add("hidden"); }
+
+        async function transitionState(id, nextState) {
+            const staffEmail = localStorage.getItem("userEmail") || "automated@alswell.com";
+            try {
+                const response = await fetch(`${API_BASE_URL}/orders/${id}/status`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ status: nextState, staff_email: staffEmail })
+                });
+                if (response.ok) {
+                    fetchSystemOrders();
+                } else {
+                    alert("Failed to update status on target endpoint repository resource.");
+                }
+            } catch(err) {
+                alert("Network communication failure.");
+            }
+        }
+
+        window.onload = fetchSystemOrders;
+    </script>
+</body>
+</html>
