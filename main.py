@@ -48,6 +48,15 @@ ai_client = OpenAI(api_key=OPENAI_KEY)
 
 app = FastAPI(title="ALSWELL Management System - AI Optimization Platform")
 
+# Root welcome endpoint to prevent 404 "Not Found" on the home page
+@app.get("/")
+def read_root():
+    return {
+        "system": "ALSWELL Management System - AI Optimization Platform",
+        "status": "Online",
+        "documentation": "/docs"
+    }
+
 @app.exception_handler(HTTPException)
 async def custom_http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
