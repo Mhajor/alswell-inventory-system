@@ -27,8 +27,14 @@ OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 # ==========================================
 # 1. DATABASE & SYSTEM INITIALIZATION
 # ==========================================
+# Configure dynamic SSL parameters for cloud hosted MySQL (e.g. Aiven) using PyMySQL
+connect_args = {}
+if "aivencloud.com" in DATABASE_URL or "ssl" in DATABASE_URL.lower():
+    connect_args = {"ssl": {"ssl_mode": "REQUIRED"}}
+
 engine = create_engine(
     DATABASE_URL, 
+    connect_args=connect_args,
     pool_size=10, 
     max_overflow=20, 
     pool_recycle=1800, 
