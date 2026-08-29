@@ -7,7 +7,8 @@ from typing import List, Optional
 from pydantic import BaseModel, EmailStr, ConfigDict, field_serializer, Field
 from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, Column, Integer, String, Numeric, ForeignKey, Text, DateTime, func
 from sqlalchemy.orm import sessionmaker, Session, relationship, declarative_base, joinedload
 from openai import OpenAI
@@ -27,7 +28,6 @@ OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 # ==========================================
 # 1. DATABASE & SYSTEM INITIALIZATION
 # ==========================================
-# Configure dynamic SSL parameters for cloud hosted MySQL (e.g. Aiven) using PyMySQL
 connect_args = {}
 if "aivencloud.com" in DATABASE_URL or "ssl" in DATABASE_URL.lower():
     connect_args = {"ssl": {"ssl_mode": "REQUIRED"}}
@@ -43,19 +43,9 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Initialize OpenAI Client dynamically using environment variables
 ai_client = OpenAI(api_key=OPENAI_KEY)
 
 app = FastAPI(title="ALSWELL Management System - AI Optimization Platform")
-
-# Root welcome endpoint to prevent 404 "Not Found" on the home page
-@app.get("/")
-def read_root():
-    return {
-        "system": "ALSWELL Management System - AI Optimization Platform",
-        "status": "Online",
-        "documentation": "/docs"
-    }
 
 @app.exception_handler(HTTPException)
 async def custom_http_exception_handler(request: Request, exc: HTTPException):
@@ -239,7 +229,6 @@ class RevenueSummaryResponse(BaseModel):
     total_aggregate_revenue: float
     monthly_breakdown: List[MonthlyRevenueItem]
 
-# --- AI AGENT RESPONSE SCHEMAS ---
 class EOQRecommendation(BaseModel):
     product_id: int
     recommended_eoq: int
@@ -434,7 +423,6 @@ def run_ai_optimization_engine(db: Session = Depends(get_db)):
 
         ai_results = response.choices[0].message.parsed
 
-        # Apply recommendations directly to the database
         for rec in ai_results.recommendations:
             prod = db.query(ProductModel).filter(ProductModel.product_id == rec.product_id).first()
             if prod:
@@ -537,7 +525,6 @@ def update_order_workflow_status(order_id: int, payload: StatusUpdatePayload, db
     target_status = status_map[raw_status]
 
     try:
-        # Stock deduction logic upon Approval/Completion
         if target_status in ["Approved", "Completed"] and order.order_status not in ["Approved", "Completed"]:
             for item in order.items:
                 product = db.query(ProductModel).filter(ProductModel.product_id == item.product_id).first()
@@ -550,7 +537,6 @@ def update_order_workflow_status(order_id: int, payload: StatusUpdatePayload, db
                         )
                     product.current_stock = available - item.quantity
 
-        # Stock restoration logic upon Cancellation
         elif target_status == "Cancelled" and order.order_status in ["Approved", "Completed"]:
             for item in order.items:
                 product = db.query(ProductModel).filter(ProductModel.product_id == item.product_id).first()
@@ -571,6 +557,27 @@ def update_order_workflow_status(order_id: int, payload: StatusUpdatePayload, db
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Status transition execution failure: {str(e)}")
 
+# ==========================================
+# 6. STATIC FILE MOUNTING & SERVING
+# ==========================================
+# Root endpoint serves storefront.html as default home page
+@app.get("/")
+def read_root():
+    if os.path.exists("storefront.html"):
+        return FileResponse("storefront.html")
+    return {"system": "ALSWELL Management System", "status": "Online"}
+
+# Serve any html page at root path level (e.g., /dashboard.html, /login.html)
+@app.get("/{filename}.html")
+def serve_html_file(filename: str):
+    filepath = f"{filename}.html"
+    if os.path.exists(filepath):
+        return FileResponse(filepath)
+    raise HTTPException(status_code=404, detail="Requested file not found.")
+
+# Mount current directory for generic static files (JS, CSS, images)
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
