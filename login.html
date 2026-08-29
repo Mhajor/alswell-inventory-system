@@ -26,18 +26,15 @@
             <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-md transition transform active:scale-95">
                 Log In to ALSWELL Hub
             </button>
-            <!-- Inside login.html, right below your login form submit button -->
-<div class="mt-6 text-center text-sm text-gray-600">
-    New customer? 
-    <a href="register.html" class="text-blue-600 hover:underline font-semibold">Create an account here</a>
-</div>
+            <div class="mt-6 text-center text-sm text-gray-600">
+                New customer? 
+                <a href="register.html" class="text-blue-600 hover:underline font-semibold">Create an account here</a>
+            </div>
         </form>
         
         <div class="mt-5 text-center">
             <a href="storefront.html" class="text-xs text-blue-600 hover:underline font-medium">← Cancel and Back to Home</a>
         </div>
-        
-        
     </div>
 
     <script>
@@ -47,7 +44,8 @@
             const password = document.getElementById("login-password").value;
 
             try {
-                const response = await fetch("http://127.0.0.1:8000/api/login", {
+                // Updated to relative endpoint for live server routing
+                const response = await fetch("/api/login", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ email, password })

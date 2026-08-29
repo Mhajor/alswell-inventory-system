@@ -123,7 +123,7 @@
                     </tr>
                 </thead>
                 <tbody id="inv-items-body">
-                    </tbody>
+                </tbody>
             </table>
 
             <div class="total-block">Total Amount Charged: GHS <span id="inv-total"></span></div>
@@ -133,7 +133,8 @@
     </template>
 
     <script>
-        const API_BASE_URL = "http://127.0.0.1:8000/api";
+        // Updated API_BASE_URL to relative path for production deployment
+        const API_BASE_URL = "/api";
         const customerEmail = localStorage.getItem("userEmail");
         const customerRole = localStorage.getItem("userRole");
 
@@ -211,14 +212,10 @@
             const order = loadedOrdersCache[referenceId];
             if (!order) return;
 
-            // Grab the clean HTML layout structure from our template tag
             const template = document.getElementById("invoice-layout").innerHTML;
-            
-            // Open standard detached browser window context
             const invoiceWindow = window.open("", "_blank", "width=800,height=600");
             invoiceWindow.document.write(template);
             
-            // Smoothly insert order properties directly into the new window DOM elements
             invoiceWindow.document.getElementById("inv-ref").innerText = order.transaction_reference;
             invoiceWindow.document.getElementById("inv-email").innerText = order.customer_email;
             invoiceWindow.document.getElementById("inv-phone").innerText = order.customer_phone || "N/A";
