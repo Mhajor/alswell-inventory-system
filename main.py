@@ -87,7 +87,6 @@ class ProductModel(Base):
     description = Column(Text, nullable=True)
     image_url = Column(Text, nullable=True)
     price = Column(Numeric(10, 2), nullable=False)
-    cost_price = Column(Numeric(10, 2), default=0.00, nullable=False)
     current_stock = Column(Integer, default=0, nullable=False)
     safety_stock_threshold = Column(Integer, default=10, nullable=False)
     economic_order_quantity = Column(Integer, default=10, nullable=False)
@@ -150,7 +149,6 @@ class ProductCreate(BaseModel):
     description: Optional[str] = None
     image_url: Optional[str] = None
     price: float
-    cost_price: Optional[float] = 0.0
     current_stock: int
     safety_stock_threshold: Optional[int] = 10
     economic_order_quantity: Optional[int] = 10
@@ -158,7 +156,6 @@ class ProductCreate(BaseModel):
 class ProductUpdate(BaseModel):
     name: str
     price: float
-    cost_price: Optional[float] = None
     image_url: Optional[str] = None
 
 class RestockPayload(BaseModel):
@@ -174,7 +171,6 @@ class ProductResponse(BaseModel):
     description: Optional[str] = None
     image_url: Optional[str] = None
     price: float
-    cost_price: float
     current_stock: int
     safety_stock_threshold: int
     economic_order_quantity: int
@@ -231,7 +227,6 @@ class MonthlyRevenueItem(BaseModel):
 class RevenueSummaryResponse(BaseModel):
     daily_realized_revenue: float
     total_aggregate_revenue: float
-    total_asset_value: float
     monthly_breakdown: List[MonthlyRevenueItem]
 
 class EOQRecommendation(BaseModel):
@@ -296,7 +291,6 @@ def create_new_product(payload: ProductCreate, db: Session = Depends(get_db)):
         description=payload.description,
         image_url=payload.image_url,
         price=payload.price, 
-        cost_price=payload.cost_price or payload.price,
         current_stock=payload.current_stock,
         safety_stock_threshold=payload.safety_stock_threshold, 
         economic_order_quantity=payload.economic_order_quantity or 10
@@ -313,8 +307,6 @@ def update_product_catalog(product_id: int, payload: ProductUpdate, db: Session 
         raise HTTPException(status_code=404, detail="Target product not found.")
     product.name = payload.name
     product.price = payload.price
-    if payload.cost_price is not None:
-        product.cost_price = payload.cost_price
     product.image_url = payload.image_url
     db.commit()
     db.refresh(product)
@@ -357,11 +349,6 @@ def get_revenue_summary(db: Session = Depends(get_db)):
         OrderModel.order_status.in_(valid_statuses)
     ).scalar()
 
-    # Total Asset Value calculated as dynamic cost sum of current remaining stock
-    asset_val = db.query(
-        func.coalesce(func.sum(ProductModel.current_stock * ProductModel.cost_price), 0)
-    ).scalar()
-
     monthly_query = db.query(
         func.date_format(OrderModel.order_date, '%Y-%m').label('month_key'),
         func.date_format(OrderModel.order_date, '%M %Y').label('month_label'),
@@ -382,7 +369,6 @@ def get_revenue_summary(db: Session = Depends(get_db)):
     return {
         "daily_realized_revenue": float(daily_rev),
         "total_aggregate_revenue": float(total_rev),
-        "total_asset_value": float(asset_val),
         "monthly_breakdown": monthly_breakdown
     }
 
@@ -549,7 +535,6 @@ def update_order_workflow_status(order_id: int, payload: StatusUpdatePayload, db
                             status_code=400, 
                             detail=f"Inventory failure. Insufficient levels for {product.name}. Required: {item.quantity}, Available: {available}"
                         )
-                    # Deducts physical stock, which reduces Total Asset Value automatically on calculation
                     product.current_stock = available - item.quantity
 
         elif target_status == "Cancelled" and order.order_status in ["Approved", "Completed"]:
@@ -575,12 +560,14 @@ def update_order_workflow_status(order_id: int, payload: StatusUpdatePayload, db
 # ==========================================
 # 6. STATIC FILE MOUNTING & SERVING
 # ==========================================
+# Root endpoint serves storefront.html as default home page
 @app.get("/")
 def read_root():
     if os.path.exists("storefront.html"):
         return FileResponse("storefront.html")
     return {"system": "ALSWELL Management System", "status": "Online"}
 
+# Serve any html page at root path level (e.g., /dashboard.html, /login.html)
 @app.get("/{filename}.html")
 def serve_html_file(filename: str):
     filepath = f"{filename}.html"
@@ -588,6 +575,7 @@ def serve_html_file(filename: str):
         return FileResponse(filepath)
     raise HTTPException(status_code=404, detail="Requested file not found.")
 
+# Mount current directory for generic static files (JS, CSS, images)
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
 
 if __name__ == "__main__":
